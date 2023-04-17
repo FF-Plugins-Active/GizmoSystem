@@ -38,7 +38,8 @@ public class GizmoSystem : ModuleRules
 				"Engine",
 				"Slate",
 				"SlateCore",
-				"InputCore"
+				"InputCore",
+                "InteractiveToolsFramework"
 				// ... add private dependencies that you statically link with here ...	
 			}
 			);

@@ -1,6 +1,5 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-
 #include "GizmoMove.h"
 
 // Sets default values
@@ -8,7 +7,6 @@ AGizmoMove::AGizmoMove()
 {
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
-
 }
 
 // Called when the game starts or when spawned
@@ -16,26 +14,37 @@ void AGizmoMove::BeginPlay()
 {	
 	Super::BeginPlay();
 
-	UWorld* CurrentWorld = GEngine->GetCurrentPlayWorld();
-	this->CapsuleComponent = (UGameplayStatics::GetPlayerCharacter(CurrentWorld, PlayerIndex))->GetCapsuleComponent();
-	this->PlayerController = UGameplayStatics::GetPlayerController(CurrentWorld, PlayerIndex);
+	GizmoBase = Cast<AGizmoBase>(this->GetParentActor());
+	
+	if (IsValid(GizmoBase))
+	{
+		EnableInput(this->GizmoBase->PlayerController);
+	}
 }
 
 // Called every frame
 void AGizmoMove::Tick(float DeltaTime)
 {
-	USceneComponent* ParentRoot = nullptr;
-	if (IsValid(this->GetParentActor()->GetRootComponent()))
+	Super::Tick(DeltaTime);
+
+	MoveMultiplier = this->GetInputAxisKeyValue(EKeys::MouseWheelAxis) + MoveMultiplier;
+
+	if (MoveMultiplier <= 0)
 	{
-		ParentRoot = this->GetParentActor()->GetRootComponent();
+		MoveMultiplier = 1;
+	}
+
+	if (IsValid(GizmoBase) == false)
+	{
+		return;
+	}
+
+	if (IsValid(this->GizmoBase->GizmoTarget) == false)
+	{
+		return;
 	}
 	
-	// Movement Gizmo Size in World.
-	double ScaleAxis = ((FVector::Distance(this->CapsuleComponent->GetComponentLocation(), this->GetRootComponent()->GetComponentLocation())) / ScaleMultiplier);
-	ParentRoot->SetWorldScale3D(FVector3d(ScaleAxis, ScaleAxis, ScaleAxis));
-
-	// Gizmo Condition.
-	if (IsValid(GizmoTarget) == false || this->DetectMovementCallback() == false || this->IsGizmoInViewCallback() == false || this->ForbiddenKeysCallback() == true)
+	if (this->GizmoBase->DetectMovementCallback() == false || this->GizmoBase->IsGizmoInViewCallback() == false || this->GizmoBase->ForbiddenKeysCallback() == true)
 	{
 		return;
 	}
@@ -43,17 +52,27 @@ void AGizmoMove::Tick(float DeltaTime)
 	// Local Space Movement.
 	if (bMoveLocal == true)
 	{
+		if (IsValid(this->GizmoBase->PlayerCamera) == false)
+		{
+			return;
+		}
+
+		if (IsValid(AxisComponent) == false)
+		{
+			return;
+		}
+
+		this->GetRootComponent()->SetWorldRotation(this->GizmoBase->GizmoTarget->GetComponentRotation());
+		
 		// MAIN VARIABLES
 		double Delta_X = 0;
 		double Delta_Y = 0;
-		this->PlayerController->GetInputMouseDelta(Delta_X, Delta_Y);
+		this->GizmoBase->PlayerController->GetInputMouseDelta(Delta_X, Delta_Y);
 
 		// MAIN CALCULATIONS
 		FVector AxisForward = AxisComponent->GetForwardVector();
-
-		FVector NormalTarget = PlayerCamera->GetComponentLocation() - GizmoTarget->GetComponentLocation();
+		FVector NormalTarget = this->GizmoBase->PlayerCamera->GetComponentLocation() - this->GizmoBase->GizmoTarget->GetComponentLocation();
 		FVector NormalizedVector = UKismetMathLibrary::Normal(FVector(NormalTarget.X, NormalTarget.Y, 0.0f), 0.0001);
-
 		FVector CrossVector = UKismetMathLibrary::Cross_VectorVector(AxisForward, NormalizedVector);
 		double DotProduct = UKismetMathLibrary::Dot_VectorVector(AxisForward, NormalizedVector);
 
@@ -61,12 +80,12 @@ void AGizmoMove::Tick(float DeltaTime)
 		double HorizontalMultiplier = 0;
 		if (CrossVector.Z > 0 == true)
 		{
-			HorizontalMultiplier = Delta_X * 5;
+			HorizontalMultiplier = Delta_X * MoveMultiplier;
 		}
 
 		else
 		{
-			HorizontalMultiplier = Delta_X * -5;
+			HorizontalMultiplier = Delta_X * MoveMultiplier * (-1);
 		}
 
 		// Y OFFSET
@@ -75,12 +94,12 @@ void AGizmoMove::Tick(float DeltaTime)
 		{
 			if (AxisForward.Z >= 0 == true)
 			{
-				VerticalMultiplier = Delta_Y * 5;
+				VerticalMultiplier = Delta_Y * MoveMultiplier;
 			}
 
 			else
 			{
-				VerticalMultiplier = Delta_Y * -5;
+				VerticalMultiplier = Delta_Y * MoveMultiplier * (-1);
 			}
 
 		}
@@ -89,50 +108,47 @@ void AGizmoMove::Tick(float DeltaTime)
 		{
 			if (DotProduct > 0 == true)
 			{
-				VerticalMultiplier = Delta_Y * -5;
+				VerticalMultiplier = Delta_Y * MoveMultiplier * (-1);
 			}
 
 			else
 			{
-				VerticalMultiplier = Delta_Y * 5;
+				VerticalMultiplier = Delta_Y * MoveMultiplier;
 			}
 		}
 
 		FVector DeltaLocation = AxisForward * UKismetMathLibrary::Lerp(VerticalMultiplier, HorizontalMultiplier, UKismetMathLibrary::FClamp(UKismetMathLibrary::Abs(CrossVector.Z), 0, 1));
-		GizmoTarget->AddWorldOffset(DeltaLocation, false, nullptr, ETeleportType::None);
-
-		this->GetRootComponent()->SetWorldRotation(GizmoTarget->GetComponentRotation());
+		this->GizmoBase->GizmoTarget->AddWorldOffset(DeltaLocation, false, nullptr, ETeleportType::None);
 	}
 
 	// World Space Movement.
 	else
 	{
-		double ObjectDistance = UKismetMathLibrary::Vector_Distance(PlayerCamera->GetComponentLocation(), GizmoTarget->GetComponentLocation());
+		this->GetRootComponent()->SetWorldRotation(FQuat(0.f), false, nullptr, ETeleportType::None);
+		
+		double ObjectDistance = UKismetMathLibrary::Vector_Distance(this->GizmoBase->PlayerCamera->GetComponentLocation(), this->GizmoBase->GizmoTarget->GetComponentLocation());
 
 		FVector MouseWorldLocation;
 		FVector MouseWorldDirection;
-		PlayerController->DeprojectMousePositionToWorld(MouseWorldLocation, MouseWorldDirection);
+		this->GizmoBase->PlayerController->DeprojectMousePositionToWorld(MouseWorldLocation, MouseWorldDirection);
 
 		FVector NewLocation = MouseWorldLocation + (MouseWorldDirection * ObjectDistance);
-		FVector OriginalLocation = GizmoTarget->GetComponentLocation();
+		FVector OriginalLocation = this->GizmoBase->GizmoTarget->GetComponentLocation();
 
 		switch (AxisEnum)
 		{
 		case ESelectedAxis::Null_Axis:
 			break;
 		case ESelectedAxis::X_Axis:
-			GizmoTarget->SetWorldLocation(FVector(NewLocation.X, GizmoTarget->GetComponentLocation().Y, GizmoTarget->GetComponentLocation().Z));
-			this->GetRootComponent()->SetWorldRotation(FQuat(0.f), false, nullptr, ETeleportType::None);
+			this->GizmoBase->GizmoTarget->SetWorldLocation(FVector(NewLocation.X, this->GizmoBase->GizmoTarget->GetComponentLocation().Y, this->GizmoBase->GizmoTarget->GetComponentLocation().Z));
 
 			break;
 		case ESelectedAxis::Y_Axis:
-			GizmoTarget->SetWorldLocation(FVector(GizmoTarget->GetComponentLocation().X, NewLocation.Y, GizmoTarget->GetComponentLocation().Z));
-			this->GetRootComponent()->SetWorldRotation(FQuat(0.f), false, nullptr, ETeleportType::None);
+			this->GizmoBase->GizmoTarget->SetWorldLocation(FVector(this->GizmoBase->GizmoTarget->GetComponentLocation().X, NewLocation.Y, this->GizmoBase->GizmoTarget->GetComponentLocation().Z));
 
 			break;
 		case ESelectedAxis::Z_Axis:
-			GizmoTarget->SetWorldLocation(FVector(GizmoTarget->GetComponentLocation().X, GizmoTarget->GetComponentLocation().Y, NewLocation.Z));
-			this->GetRootComponent()->SetWorldRotation(FQuat(0.f), false, nullptr, ETeleportType::None);
+			this->GizmoBase->GizmoTarget->SetWorldLocation(FVector(this->GizmoBase->GizmoTarget->GetComponentLocation().X, this->GizmoBase->GizmoTarget->GetComponentLocation().Y, NewLocation.Z));
 
 			break;
 		case ESelectedAxis::XY_Axis:
@@ -149,88 +165,10 @@ void AGizmoMove::Tick(float DeltaTime)
 	}
 
 	// Object Tracking for Gizmo.
-	ParentRoot->SetWorldLocation(this->GizmoTarget->GetComponentLocation(), false, nullptr, ETeleportType::None);
-
-	// Mouse Wheel Rotation.
-	if (this->GetInputAxisKeyValue(EKeys::MouseWheelAxis) != 0)
+	USceneComponent* ParentRoot = nullptr;
+	if (IsValid(GizmoBase->GetRootComponent()))
 	{
-		if (this->IsGizmoInViewCallback() == true)
-		{
-			double RotationAxis = GetInputAxisKeyValue(EKeys::MouseWheelAxis) * RotateMultiplier;
-			FRotator Rotation;
-			/*
-			switch (SelectedAxis)
-			{
-			case ESelectedAxis::X_Axis:
-				Rotation.Roll = RotationAxis;
-				UKismetMathLibrary::TransformRotation(this->GizmoTarget->GetComponentTransform(), Rotation);
-				break;
-			case ESelectedAxis::Y_Axis:
-				Rotation.Pitch = RotationAxis;
-				UKismetMathLibrary::TransformRotation(this->GizmoTarget->GetComponentTransform(), Rotation);
-				break;
-			case ESelectedAxis::Z_Axis:
-				Rotation.Yaw = RotationAxis;
-				UKismetMathLibrary::TransformRotation(this->GizmoTarget->GetComponentTransform(), Rotation);
-				break;
-			case ESelectedAxis::XY_Axis:
-				break;
-			case ESelectedAxis::XZ_Axis:
-				break;
-			case ESelectedAxis::YZ_Axis:
-				break;
-			case ESelectedAxis::XYZ_Axis:
-				break;
-			}
-			*/
-		}
-	}
-	
-	Super::Tick(DeltaTime);	
-}
-
-bool AGizmoMove::ForbiddenKeysCallback()
-{
-	bool bForbiddenKeyPressed = false;
-	
-	for (int32 PressedKeyIndex = 0; PressedKeyIndex < PressedKeys.Num(); PressedKeyIndex++)
-	{
-		if (ForbiddenKeys.Contains(PressedKeys[PressedKeyIndex]))
-		{
-			bForbiddenKeyPressed = true;
-			break;
-		}
-	}
-
-	return bForbiddenKeyPressed;
-}
-
-bool AGizmoMove::DetectMovementCallback()
-{
-	double Delta_X;
-	double Delta_Y;
-	UGameplayStatics::GetPlayerController(GEngine->GetCurrentPlayWorld(), 0)->GetInputMouseDelta(Delta_X, Delta_Y);
-
-	if (Delta_X || Delta_Y != 0)
-	{
-		return true;
-	}
-
-	else
-	{
-		return false;
-	}
-}
-
-bool AGizmoMove::IsGizmoInViewCallback()
-{
-	if ((UKismetMathLibrary::Dot_VectorVector(PlayerCamera->GetForwardVector(), UKismetMathLibrary::Normal(GizmoTarget->GetComponentLocation() - PlayerCamera->GetComponentLocation(), 0.0001f))) > 0.5)
-	{
-		return true;
-	}
-	
-	else
-	{
-		return false;
-	}
+		ParentRoot = GizmoBase->GetRootComponent();
+		ParentRoot->SetWorldLocation(this->GizmoBase->GizmoTarget->GetComponentLocation(), false, nullptr, ETeleportType::None);
+	}	
 }
