@@ -1,6 +1,7 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "Custom/GizmoBase.h"
+#include "Custom/GizmoMove.h"
 
 // Sets default values
 AGizmoBase::AGizmoBase()
@@ -26,9 +27,23 @@ void AGizmoBase::BeginPlay()
 	this->PlayerController = UGameplayStatics::GetPlayerController(CurrentWorld, PlayerIndex);
 	this->CapsuleComponent = Character->GetCapsuleComponent();
 
-	if (Character->GetComponentsByTag(USceneComponent::StaticClass(), FName("camera")).Num() > 0)
+	if (!IsValid(this->PlayerCamera))
 	{
-		this->PlayerCamera = Cast<USceneComponent>(Character->GetComponentsByTag(USceneComponent::StaticClass(), FName("camera"))[0]);
+		TArray<UCameraComponent*> Components;
+		Character->GetComponents(Components);
+		for (UCameraComponent* EachComponent : Components)
+		{
+			UClass* ComponentClass = EachComponent->GetClass();
+			if (ComponentClass == UCameraComponent::StaticClass())
+			{
+				this->PlayerCamera = EachComponent;
+				break;
+			}
+		}
+	}
+
+	if (IsValid(this->PlayerCamera))
+	{
 		EnableInput(this->PlayerController);
 	}
 
@@ -36,6 +51,11 @@ void AGizmoBase::BeginPlay()
 	{
 		UE_LOG(LogTemp, Warning, TEXT("You need to define camera and enable input manually."))
 	}
+}
+
+void AGizmoBase::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	Super::EndPlay(EndPlayReason);
 }
 
 // Called every frame
@@ -49,6 +69,22 @@ void AGizmoBase::Tick(float DeltaTime)
 		double ScaleAxis = ((FVector::Distance(this->CapsuleComponent->GetComponentLocation(), this->GetRootComponent()->GetComponentLocation())) / this->GizmoSizeMultiplier);
 		GizmoType->GetChildActor()->GetRootComponent()->SetWorldScale3D(FVector3d(ScaleAxis, ScaleAxis, ScaleAxis));
 	}
+
+	InputComponent->BindAction("AnyKey", IE_Pressed, this, &AGizmoBase::AnyKey_Pressed);
+	InputComponent->BindAction("AnyKey", IE_Released, this, &AGizmoBase::AnyKey_Pressed);
+}
+
+void AGizmoBase::AnyKey_Pressed(FKey Key)
+{
+	this->PressedKeys.Add(Key);
+}
+
+void AGizmoBase::AnyKey_Released(FKey Key)
+{
+	if (this->PressedKeys.Contains(Key))
+	{
+		PressedKeys.Remove(Key);
+	}
 }
 
 bool AGizmoBase::ForbiddenKeysCallback()
@@ -57,7 +93,7 @@ bool AGizmoBase::ForbiddenKeysCallback()
 
 	for (int32 PressedKeyIndex = 0; PressedKeyIndex <PressedKeys.Num(); PressedKeyIndex++)
 	{
-		if (ForbiddenKeys.Contains(PressedKeys[PressedKeyIndex]))
+		if (ForbiddenKeys.Contains(PressedKeys.Array()[PressedKeyIndex]))
 		{
 			bForbiddenKeyPressed = true;
 			break;

@@ -16,14 +16,13 @@ class GIZMOSYSTEM_API AGizmoMove : public AActor
 
 protected:
 
-	// Called when the game starts or when spawned
+	// Called when the game starts or when spawned.
 	virtual void BeginPlay() override;
 
 	// Called when the game end or when destroyed.
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
-	UPROPERTY(BlueprintReadOnly)
-	AGizmoBase* GizmoBase = nullptr;
+	APlayerController* PlayerController = nullptr;
 
 	virtual void InitHandles();
 	virtual void TransformSystem();
@@ -31,11 +30,10 @@ protected:
 	virtual void Transform_World();
 	virtual void Transform_Local();
 	virtual void Transform_Track();
+	virtual void BindDelegates();
 
 	UFUNCTION()
 	virtual void OnClickedEvent(UPrimitiveComponent* TouchComponent, FKey PressedButton);
-
-	virtual void BindDelegates();
 
 public:	
 
@@ -44,6 +42,9 @@ public:
 
 	// Called every frame.
 	virtual void Tick(float DeltaTime) override;
+
+	UFUNCTION(BlueprintCallable)
+	virtual void SetArrowMesh(UStaticMesh* In_Mesh);
 
 	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, meta = (AllowPrivateAccess = "true"))
 	USceneComponent* Root = nullptr;
@@ -57,8 +58,8 @@ public:
 	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, meta = (AllowPrivateAccess = "true"))
 	UStaticMeshComponent* Axis_Z = nullptr;
 
-	UFUNCTION(BlueprintCallable)
-	virtual void SetArrowMesh(UStaticMesh* In_Mesh);
+	UPROPERTY(BlueprintReadOnly)
+	AGizmoBase* GizmoBase = nullptr;
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere)
 	UPrimitiveComponent* AxisComponent = nullptr;

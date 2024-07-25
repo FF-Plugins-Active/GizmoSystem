@@ -7,7 +7,6 @@ AGizmoMove::AGizmoMove()
 {
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
-
 	this->InitHandles();
 }
 
@@ -16,12 +15,23 @@ void AGizmoMove::BeginPlay()
 {	
 	Super::BeginPlay();
 
-	GizmoBase = Cast<AGizmoBase>(this->GetParentActor());
-	
-	if (IsValid(GizmoBase))
+	if (!IsValid(this->GetParentActor()))
 	{
-		EnableInput(this->GizmoBase->PlayerController);
+		return;
 	}
+
+	AGizmoBase* TempBase = Cast<AGizmoBase>(this->GetParentActor());
+
+	if (!IsValid(TempBase))
+	{
+		return;
+	}
+
+	this->GizmoBase = TempBase;
+	
+	UWorld* CurrentWorld = GEngine->GetCurrentPlayWorld();
+	this->PlayerController = UGameplayStatics::GetPlayerController(CurrentWorld, this->GizmoBase->PlayerIndex);
+	EnableInput(this->PlayerController);
 
 	this->BindDelegates();
 }
@@ -51,7 +61,7 @@ void AGizmoMove::InitHandles()
 
 	this->Axis_Y = CreateDefaultSubobject<UStaticMeshComponent>("Axis_Y");
 	this->Axis_Y->AttachToComponent(this->Root, FAttachmentTransformRules::KeepRelativeTransform);
-	this->Axis_Y->SetRelativeRotation(FVector(0, 0, 90).ToOrientationRotator());
+	this->Axis_Y->SetRelativeRotation(FRotator3d(0, 90, 0));
 	this->Axis_Y->ComponentTags.Add(FName("Axis_Y"));
 	this->Axis_Y->SetGenerateOverlapEvents(true);
 	this->Axis_Y->SetCollisionProfileName(FName("BlockAll"));
@@ -59,7 +69,7 @@ void AGizmoMove::InitHandles()
 	
 	this->Axis_Z = CreateDefaultSubobject<UStaticMeshComponent>("Axis_Z");
 	this->Axis_Z->AttachToComponent(this->Root, FAttachmentTransformRules::KeepRelativeTransform);
-	this->Axis_Z->SetRelativeRotation(FVector(0, 90, 0).ToOrientationRotator());
+	this->Axis_Z->SetRelativeRotation(FRotator3d(90, 0, 0));
 	this->Axis_Z->ComponentTags.Add(FName("Axis_Z"));
 	this->Axis_Z->SetGenerateOverlapEvents(true);
 	this->Axis_Z->SetCollisionProfileName(FName("BlockAll"));
@@ -97,16 +107,51 @@ bool AGizmoMove::Transform_Check()
 {
 	if (!IsValid(GizmoBase))
 	{
+		if (bEnableDebugMode)
+		{
+			GEngine->AddOnScreenDebugMessage(-1, 10, FColor::Red, "Gizmo Move : Gizmo base is not valid !");
+		}
+
 		return false;
 	}
 
 	if (!IsValid(this->GizmoBase->GizmoTarget))
 	{
+		if (bEnableDebugMode)
+		{
+			GEngine->AddOnScreenDebugMessage(-1, 10, FColor::Red, "Gizmo Move : Gizmo target is not valid !");
+		}
+
 		return false;
 	}
 
-	if (!this->GizmoBase->DetectMovementCallback() || !this->GizmoBase->IsGizmoInViewCallback() || this->GizmoBase->ForbiddenKeysCallback())
+	if (!this->GizmoBase->DetectMovementCallback())
 	{
+		if (bEnableDebugMode)
+		{
+			GEngine->AddOnScreenDebugMessage(-1, 10, FColor::Red, "Gizmo Move : There is no movement !");
+		}
+
+		return false;
+	}
+
+	if (!this->GizmoBase->IsGizmoInViewCallback())
+	{
+		if (bEnableDebugMode)
+		{
+			GEngine->AddOnScreenDebugMessage(-1, 10, FColor::Red, "Gizmo Move : Gizmo is not in the view !");
+		}
+		
+		return false;
+	}
+
+	if (this->GizmoBase->ForbiddenKeysCallback())
+	{
+		if (bEnableDebugMode)
+		{
+			GEngine->AddOnScreenDebugMessage(-1, 10, FColor::Red, "Gizmo Move : Forbidden key pressed !");
+		}
+
 		return false;
 	}
 
@@ -121,7 +166,7 @@ void AGizmoMove::Transform_World()
 
 	FVector MouseWorldLocation;
 	FVector MouseWorldDirection;
-	this->GizmoBase->PlayerController->DeprojectMousePositionToWorld(MouseWorldLocation, MouseWorldDirection);
+	this->PlayerController->DeprojectMousePositionToWorld(MouseWorldLocation, MouseWorldDirection);
 
 	const FVector NewLocation = MouseWorldLocation + (MouseWorldDirection * ObjectDistance);
 	const FVector OriginalLocation = this->GizmoBase->GizmoTarget->GetComponentLocation();
@@ -176,7 +221,7 @@ void AGizmoMove::Transform_Local()
 	// MAIN VARIABLES
 	double Delta_X = 0;
 	double Delta_Y = 0;
-	this->GizmoBase->PlayerController->GetInputMouseDelta(Delta_X, Delta_Y);
+	this->PlayerController->GetInputMouseDelta(Delta_X, Delta_Y);
 
 	// MAIN CALCULATIONS
 	const FVector AxisForward = AxisComponent->GetForwardVector();

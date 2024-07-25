@@ -16,61 +16,53 @@ class GIZMOSYSTEM_API AGizmoBase : public AActor
 	GENERATED_BODY()
 	
 protected:
-	// Called when the game starts or when spawned
+	
+	// Called when the game starts or when spawned.
 	virtual void BeginPlay() override;
+
+	// Called when the game end or when destroyed.
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+
+	TSet<FKey> PressedKeys;
+	APlayerController* PlayerController = nullptr;
+	UCapsuleComponent* CapsuleComponent = nullptr;
 
 public:	
 
-	// Sets default values for this actor's properties
+	// Sets default values for this actor's properties.
 	AGizmoBase();
 
-	// Called every frame
+	// Called every frame.
 	virtual void Tick(float DeltaTime) override;
 
 // Callbacks.
 public:
 
+	virtual void AnyKey_Pressed(FKey Key);
+	virtual void AnyKey_Released(FKey Key);
 	virtual bool ForbiddenKeysCallback();
 	virtual bool DetectMovementCallback();
 	virtual bool IsGizmoInViewCallback();
 
-// Player Variables.
-public:
+	UPROPERTY(BlueprintReadWrite, VisibleAnywhere, meta = (AllowPrivateAccess = "true"))
+	USceneComponent* Root = nullptr;
 
-	UPROPERTY(BlueprintReadWrite, EditAnywhere)
-	UCapsuleComponent* CapsuleComponent = nullptr;
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, meta = (AllowPrivateAccess = "true"))
+	UChildActorComponent* GizmoType = nullptr;
 
-	UPROPERTY(BlueprintReadWrite, EditAnywhere)
-	APlayerController* PlayerController = nullptr;
+	UPROPERTY(BlueprintReadWrite)
+	UCameraComponent* PlayerCamera = nullptr;
 
-	UPROPERTY(BlueprintReadWrite, EditAnywhere)
-	USceneComponent* PlayerCamera = nullptr;
-
-	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	UPROPERTY(BlueprintReadWrite)
 	int32 PlayerIndex = 0;
 
-// Actor Components.
-public:
-	
-	UPROPERTY(VisibleAnywhere)
-	USceneComponent* Root;
-
-	UPROPERTY(BlueprintReadWrite, EditAnywhere)
-	UChildActorComponent* GizmoType;
-
-// Actor Variables.
-public:
-
-	UPROPERTY(BlueprintReadWrite, EditAnywhere)
-	USceneComponent* GizmoTarget;
+	UPROPERTY(BlueprintReadWrite)
+	USceneComponent* GizmoTarget = nullptr;
 	
 	UPROPERTY(BlueprintReadWrite, EditAnywhere)
 	int32 GizmoSizeMultiplier = 1150;
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere)
 	TArray<FKey> ForbiddenKeys;
-
-	UPROPERTY(BlueprintReadWrite, EditAnywhere)
-	TArray<FKey> PressedKeys;
 
 };
