@@ -53,6 +53,7 @@ void AGizmoRotate::InitHandles()
 	this->Axis_X->SetGenerateOverlapEvents(true);
 	this->Axis_X->SetCollisionProfileName(FName("BlockAll"));
 	this->Axis_X->SetNotifyRigidBodyCollision(true);
+	this->Axis_X->SetCastShadow(false);
 
 	this->Axis_Y = CreateDefaultSubobject<UStaticMeshComponent>("Axis_Y");
 	this->Axis_Y->AttachToComponent(this->Root, FAttachmentTransformRules::KeepRelativeTransform);
@@ -61,6 +62,7 @@ void AGizmoRotate::InitHandles()
 	this->Axis_Y->SetGenerateOverlapEvents(true);
 	this->Axis_Y->SetCollisionProfileName(FName("BlockAll"));
 	this->Axis_Y->SetNotifyRigidBodyCollision(true);
+	this->Axis_Y->SetCastShadow(false);
 
 	this->Axis_Z = CreateDefaultSubobject<UStaticMeshComponent>("Axis_Z");
 	this->Axis_Z->AttachToComponent(this->Root, FAttachmentTransformRules::KeepRelativeTransform);
@@ -69,6 +71,7 @@ void AGizmoRotate::InitHandles()
 	this->Axis_Z->SetGenerateOverlapEvents(true);
 	this->Axis_Z->SetCollisionProfileName(FName("BlockAll"));
 	this->Axis_Z->SetNotifyRigidBodyCollision(true);
+	this->Axis_Z->SetCastShadow(false);
 }
 
 void AGizmoRotate::RotateSystem()

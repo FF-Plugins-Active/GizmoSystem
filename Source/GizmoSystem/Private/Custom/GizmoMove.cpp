@@ -31,8 +31,7 @@ void AGizmoMove::BeginPlay()
 	
 	UWorld* CurrentWorld = GEngine->GetCurrentPlayWorld();
 	this->PlayerController = UGameplayStatics::GetPlayerController(CurrentWorld, this->GizmoBase->PlayerIndex);
-	EnableInput(this->PlayerController);
-
+	
 	this->BindDelegates();
 }
 
@@ -58,6 +57,7 @@ void AGizmoMove::InitHandles()
 	this->Axis_X->SetGenerateOverlapEvents(true);
 	this->Axis_X->SetCollisionProfileName(FName("BlockAll"));
 	this->Axis_X->SetNotifyRigidBodyCollision(true);
+	this->Axis_X->SetCastShadow(false);
 
 	this->Axis_Y = CreateDefaultSubobject<UStaticMeshComponent>("Axis_Y");
 	this->Axis_Y->AttachToComponent(this->Root, FAttachmentTransformRules::KeepRelativeTransform);
@@ -66,6 +66,7 @@ void AGizmoMove::InitHandles()
 	this->Axis_Y->SetGenerateOverlapEvents(true);
 	this->Axis_Y->SetCollisionProfileName(FName("BlockAll"));
 	this->Axis_Y->SetNotifyRigidBodyCollision(true);
+	this->Axis_Y->SetCastShadow(false);
 	
 	this->Axis_Z = CreateDefaultSubobject<UStaticMeshComponent>("Axis_Z");
 	this->Axis_Z->AttachToComponent(this->Root, FAttachmentTransformRules::KeepRelativeTransform);
@@ -74,6 +75,7 @@ void AGizmoMove::InitHandles()
 	this->Axis_Z->SetGenerateOverlapEvents(true);
 	this->Axis_Z->SetCollisionProfileName(FName("BlockAll"));
 	this->Axis_Z->SetNotifyRigidBodyCollision(true);
+	this->Axis_Z->SetCastShadow(false);
 }
 
 void AGizmoMove::TransformSystem()
@@ -320,13 +322,12 @@ void AGizmoMove::BindDelegates()
 {
 	if (IsValid(this->Axis_X) && IsValid(this->Axis_Y) && IsValid(this->Axis_X))
 	{
+		EnableInput(this->PlayerController);
+		this->PlayerController->bEnableClickEvents = true;
+
 		this->Axis_X->OnClicked.AddDynamic(this, &AGizmoMove::OnClickedEvent);
 		this->Axis_Y->OnClicked.AddDynamic(this, &AGizmoMove::OnClickedEvent);
-		this->Axis_Z->OnClicked.AddDynamic(this, &AGizmoMove::OnClickedEvent);
-
-		UWorld* CurrentWorld = GEngine->GetCurrentPlayWorld();
-		const int32 PlayerIndex = UGameplayStatics::GetNumLocalPlayerControllers(CurrentWorld) - 1;
-		UGameplayStatics::GetPlayerController(CurrentWorld, PlayerIndex)->bEnableClickEvents = true;
+		this->Axis_Z->OnClicked.AddDynamic(this, &AGizmoMove::OnClickedEvent);		
 	}
 }
 
