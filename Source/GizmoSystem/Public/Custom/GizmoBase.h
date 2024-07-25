@@ -5,29 +5,10 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 
-#include "InputCoreTypes.h"
-
-#include "GameFramework/Character.h"
-#include "Components/CapsuleComponent.h"
-
-#include "Kismet/GameplayStatics.h"
-#include "Kismet/KismetMathLibrary.h"
+#include "Gizmo_Includes.h"
+#include "Gizmo_Enums.h"
 
 #include "GizmoBase.generated.h"
-
-UENUM(BlueprintType)
-enum class ESelectedAxis : uint8
-{
-	Null_Axis	UMETA(DisplayName = "Null Axis"),
-	X_Axis		UMETA(DisplayName = "X Axis"),
-	Y_Axis		UMETA(DisplayName = "Y Axis"),
-	Z_Axis		UMETA(DisplayName = "Z Axis"),
-	XY_Axis		UMETA(DisplayName = "XY Axis"),
-	XZ_Axis		UMETA(DisplayName = "XZ Axis"),
-	YZ_Axis		UMETA(DisplayName = "YZ Axis"),
-	XYZ_Axis	UMETA(DisplayName = "XYZ Axis"),
-};
-ENUM_CLASS_FLAGS(ESelectedAxis)
 
 UCLASS()
 class GIZMOSYSTEM_API AGizmoBase : public AActor
@@ -39,6 +20,7 @@ protected:
 	virtual void BeginPlay() override;
 
 public:	
+
 	// Sets default values for this actor's properties
 	AGizmoBase();
 
@@ -56,16 +38,16 @@ public:
 public:
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere)
-	UCapsuleComponent* CapsuleComponent;
+	UCapsuleComponent* CapsuleComponent = nullptr;
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere)
-	APlayerController* PlayerController;
+	APlayerController* PlayerController = nullptr;
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere)
-	USceneComponent* PlayerCamera;
+	USceneComponent* PlayerCamera = nullptr;
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere)
-	int32 PlayerIndex;
+	int32 PlayerIndex = 0;
 
 // Actor Components.
 public:

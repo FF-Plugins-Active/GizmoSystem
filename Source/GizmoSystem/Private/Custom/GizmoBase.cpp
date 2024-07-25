@@ -1,6 +1,6 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-#include "GizmoBase.h"
+#include "Custom/GizmoBase.h"
 
 // Sets default values
 AGizmoBase::AGizmoBase()
@@ -21,14 +21,21 @@ void AGizmoBase::BeginPlay()
 	Super::BeginPlay();
 	
 	UWorld* CurrentWorld = GEngine->GetCurrentPlayWorld();
-	
-	if (IsValid(UGameplayStatics::GetPlayerCharacter(CurrentWorld, PlayerIndex)))
-	{
-		this->CapsuleComponent = UGameplayStatics::GetPlayerCharacter(CurrentWorld, PlayerIndex)->GetCapsuleComponent();
-	}
-	
+	ACharacter* Character = UGameplayStatics::GetPlayerCharacter(CurrentWorld, PlayerIndex);
+
 	this->PlayerController = UGameplayStatics::GetPlayerController(CurrentWorld, PlayerIndex);
-	EnableInput(this->PlayerController);
+	this->CapsuleComponent = Character->GetCapsuleComponent();
+
+	if (Character->GetComponentsByTag(USceneComponent::StaticClass(), FName("camera")).Num() > 0)
+	{
+		this->PlayerCamera = Cast<USceneComponent>(Character->GetComponentsByTag(USceneComponent::StaticClass(), FName("camera"))[0]);
+		EnableInput(this->PlayerController);
+	}
+
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("You need to define camera and enable input manually."))
+	}
 }
 
 // Called every frame
@@ -37,14 +44,10 @@ void AGizmoBase::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 
 	// Gizmo Size in World.
-	if (IsValid(this->CapsuleComponent))
+	if (IsValid(this->CapsuleComponent) && IsValid(GizmoType->GetChildActor()))
 	{
 		double ScaleAxis = ((FVector::Distance(this->CapsuleComponent->GetComponentLocation(), this->GetRootComponent()->GetComponentLocation())) / this->GizmoSizeMultiplier);
-
-		if (IsValid(GizmoType->GetChildActor()))
-		{
-			GizmoType->GetChildActor()->GetRootComponent()->SetWorldScale3D(FVector3d(ScaleAxis, ScaleAxis, ScaleAxis));
-		}
+		GizmoType->GetChildActor()->GetRootComponent()->SetWorldScale3D(FVector3d(ScaleAxis, ScaleAxis, ScaleAxis));
 	}
 }
 
@@ -68,7 +71,7 @@ bool AGizmoBase::DetectMovementCallback()
 {
 	double Delta_X;
 	double Delta_Y;
-	UGameplayStatics::GetPlayerController(GEngine->GetCurrentPlayWorld(), 0)->GetInputMouseDelta(Delta_X, Delta_Y);
+	this->PlayerController->GetInputMouseDelta(Delta_X, Delta_Y);
 
 	if (Delta_X || Delta_Y != 0)
 	{
@@ -83,13 +86,13 @@ bool AGizmoBase::DetectMovementCallback()
 
 bool AGizmoBase::IsGizmoInViewCallback()
 {
-	if ((UKismetMathLibrary::Dot_VectorVector(PlayerCamera->GetForwardVector(), UKismetMathLibrary::Normal(GizmoTarget->GetComponentLocation() - PlayerCamera->GetComponentLocation(), 0.0001f))) > 0.5)
+	if (!IsValid(PlayerCamera) || !IsValid(GizmoTarget) || !((UKismetMathLibrary::Dot_VectorVector(PlayerCamera->GetForwardVector(), UKismetMathLibrary::Normal(GizmoTarget->GetComponentLocation() - PlayerCamera->GetComponentLocation(), 0.0001f))) > 0.5))
 	{
-		return true;
+		return false;
 	}
 
 	else
 	{
-		return false;
+		return true;
 	}
 }

@@ -1,0 +1,298 @@
+// Fill out your copyright notice in the Description page of Project Settings.
+
+#include "Custom/GizmoMove.h"
+
+// Sets default values.
+AGizmoMove::AGizmoMove()
+{
+ 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
+	PrimaryActorTick.bCanEverTick = true;
+
+	this->InitHandles();
+}
+
+// Called when the game starts or when spawned.
+void AGizmoMove::BeginPlay()
+{	
+	Super::BeginPlay();
+
+	GizmoBase = Cast<AGizmoBase>(this->GetParentActor());
+	
+	if (IsValid(GizmoBase))
+	{
+		EnableInput(this->GizmoBase->PlayerController);
+	}
+
+	this->BindDelegates();
+}
+
+void AGizmoMove::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	Super::EndPlay(EndPlayReason);
+}
+
+// Called every frame.
+void AGizmoMove::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+	this->TransformSystem();
+}
+
+void AGizmoMove::InitHandles()
+{
+	this->Root = CreateDefaultSubobject<USceneComponent>("Root");
+
+	this->Axis_X = CreateDefaultSubobject<UStaticMeshComponent>("Axis_X");
+	this->Axis_X->AttachToComponent(this->Root, FAttachmentTransformRules::KeepRelativeTransform);
+	this->Axis_X->ComponentTags.Add(FName("Axis_X"));
+	this->Axis_X->SetGenerateOverlapEvents(true);
+	this->Axis_X->SetCollisionProfileName(FName("BlockAll"));
+	this->Axis_X->SetNotifyRigidBodyCollision(true);
+
+	this->Axis_Y = CreateDefaultSubobject<UStaticMeshComponent>("Axis_Y");
+	this->Axis_Y->AttachToComponent(this->Root, FAttachmentTransformRules::KeepRelativeTransform);
+	this->Axis_Y->SetRelativeRotation(FVector(0, 0, 90).ToOrientationRotator());
+	this->Axis_Y->ComponentTags.Add(FName("Axis_Y"));
+	this->Axis_Y->SetGenerateOverlapEvents(true);
+	this->Axis_Y->SetCollisionProfileName(FName("BlockAll"));
+	this->Axis_Y->SetNotifyRigidBodyCollision(true);
+	
+	this->Axis_Z = CreateDefaultSubobject<UStaticMeshComponent>("Axis_Z");
+	this->Axis_Z->AttachToComponent(this->Root, FAttachmentTransformRules::KeepRelativeTransform);
+	this->Axis_Z->SetRelativeRotation(FVector(0, 90, 0).ToOrientationRotator());
+	this->Axis_Z->ComponentTags.Add(FName("Axis_Z"));
+	this->Axis_Z->SetGenerateOverlapEvents(true);
+	this->Axis_Z->SetCollisionProfileName(FName("BlockAll"));
+	this->Axis_Z->SetNotifyRigidBodyCollision(true);
+}
+
+void AGizmoMove::TransformSystem()
+{
+	if (!this->Transform_Check())
+	{
+		return;
+	}
+
+	MoveMultiplier = this->GetInputAxisKeyValue(EKeys::MouseWheelAxis) + MoveMultiplier;
+
+	if (MoveMultiplier <= 0)
+	{
+		MoveMultiplier = 1;
+	}
+
+	if (bMoveLocal)
+	{
+		this->Transform_Local();
+	}
+
+	else
+	{
+		this->Transform_World();
+	}
+
+	this->Transform_Track();
+}
+
+bool AGizmoMove::Transform_Check()
+{
+	if (!IsValid(GizmoBase))
+	{
+		return false;
+	}
+
+	if (!IsValid(this->GizmoBase->GizmoTarget))
+	{
+		return false;
+	}
+
+	if (!this->GizmoBase->DetectMovementCallback() || !this->GizmoBase->IsGizmoInViewCallback() || this->GizmoBase->ForbiddenKeysCallback())
+	{
+		return false;
+	}
+
+	return true;
+}
+
+void AGizmoMove::Transform_World()
+{
+	this->GetRootComponent()->SetWorldRotation(FQuat(0.f), false, nullptr, ETeleportType::None);
+
+	const double ObjectDistance = UKismetMathLibrary::Vector_Distance(this->GizmoBase->PlayerCamera->GetComponentLocation(), this->GizmoBase->GizmoTarget->GetComponentLocation());
+
+	FVector MouseWorldLocation;
+	FVector MouseWorldDirection;
+	this->GizmoBase->PlayerController->DeprojectMousePositionToWorld(MouseWorldLocation, MouseWorldDirection);
+
+	const FVector NewLocation = MouseWorldLocation + (MouseWorldDirection * ObjectDistance);
+	const FVector OriginalLocation = this->GizmoBase->GizmoTarget->GetComponentLocation();
+
+	switch (AxisEnum)
+	{
+		case ESelectedAxis::Null_Axis:
+			break;
+
+		case ESelectedAxis::X_Axis:
+
+			this->GizmoBase->GizmoTarget->SetWorldLocation(FVector(NewLocation.X, this->GizmoBase->GizmoTarget->GetComponentLocation().Y, this->GizmoBase->GizmoTarget->GetComponentLocation().Z));
+			break;
+
+		case ESelectedAxis::Y_Axis:
+
+			this->GizmoBase->GizmoTarget->SetWorldLocation(FVector(this->GizmoBase->GizmoTarget->GetComponentLocation().X, NewLocation.Y, this->GizmoBase->GizmoTarget->GetComponentLocation().Z));
+			break;
+
+		case ESelectedAxis::Z_Axis:
+
+			this->GizmoBase->GizmoTarget->SetWorldLocation(FVector(this->GizmoBase->GizmoTarget->GetComponentLocation().X, this->GizmoBase->GizmoTarget->GetComponentLocation().Y, NewLocation.Z));
+			break;
+
+		case ESelectedAxis::XY_Axis:
+			break;
+		case ESelectedAxis::XZ_Axis:
+			break;
+		case ESelectedAxis::YZ_Axis:
+			break;
+		case ESelectedAxis::XYZ_Axis:
+			break;
+		default:
+			break;
+	}
+}
+
+void AGizmoMove::Transform_Local()
+{
+	if (IsValid(this->GizmoBase->PlayerCamera) == false)
+	{
+		return;
+	}
+
+	if (IsValid(AxisComponent) == false)
+	{
+		return;
+	}
+
+	this->GetRootComponent()->SetWorldRotation(this->GizmoBase->GizmoTarget->GetComponentRotation());
+
+	// MAIN VARIABLES
+	double Delta_X = 0;
+	double Delta_Y = 0;
+	this->GizmoBase->PlayerController->GetInputMouseDelta(Delta_X, Delta_Y);
+
+	// MAIN CALCULATIONS
+	const FVector AxisForward = AxisComponent->GetForwardVector();
+	const FVector NormalTarget = this->GizmoBase->PlayerCamera->GetComponentLocation() - this->GizmoBase->GizmoTarget->GetComponentLocation();
+	const FVector NormalizedVector = UKismetMathLibrary::Normal(FVector(NormalTarget.X, NormalTarget.Y, 0.0f), 0.0001);
+	const FVector CrossVector = UKismetMathLibrary::Cross_VectorVector(AxisForward, NormalizedVector);
+	const double DotProduct = UKismetMathLibrary::Dot_VectorVector(AxisForward, NormalizedVector);
+
+	// X OFFSET
+	double HorizontalMultiplier = 0;
+	if (CrossVector.Z > 0 == true)
+	{
+		HorizontalMultiplier = Delta_X * MoveMultiplier;
+	}
+
+	else
+	{
+		HorizontalMultiplier = Delta_X * MoveMultiplier * (-1);
+	}
+
+	// Y OFFSET
+	double VerticalMultiplier = 0;
+	if (UKismetMathLibrary::Abs(AxisForward.Z) >= 0.75 == true)
+	{
+		if (AxisForward.Z >= 0 == true)
+		{
+			VerticalMultiplier = Delta_Y * MoveMultiplier;
+		}
+
+		else
+		{
+			VerticalMultiplier = Delta_Y * MoveMultiplier * (-1);
+		}
+
+	}
+
+	else
+	{
+		if (DotProduct > 0 == true)
+		{
+			VerticalMultiplier = Delta_Y * MoveMultiplier * (-1);
+		}
+
+		else
+		{
+			VerticalMultiplier = Delta_Y * MoveMultiplier;
+		}
+	}
+
+	FVector DeltaLocation = AxisForward * UKismetMathLibrary::Lerp(VerticalMultiplier, HorizontalMultiplier, UKismetMathLibrary::FClamp(UKismetMathLibrary::Abs(CrossVector.Z), 0, 1));
+	this->GizmoBase->GizmoTarget->AddWorldOffset(DeltaLocation, false, nullptr, ETeleportType::None);
+}
+
+void AGizmoMove::Transform_Track()
+{
+	USceneComponent* ParentRoot = nullptr;
+
+	if (IsValid(GizmoBase->GetRootComponent()))
+	{
+		ParentRoot = GizmoBase->GetRootComponent();
+		ParentRoot->SetWorldLocation(this->GizmoBase->GizmoTarget->GetComponentLocation(), false, nullptr, ETeleportType::None);
+	}
+}
+
+void AGizmoMove::OnClickedEvent(UPrimitiveComponent* TouchComponent, FKey PressedButton)
+{
+	if (!IsValid(TouchComponent))
+	{
+		return;
+	}
+
+	this->AxisComponent = TouchComponent;
+
+	if (TouchComponent->ComponentHasTag(FName("Axis_X")))
+	{
+		this->AxisEnum = ESelectedAxis::X_Axis;
+	}
+
+	else if (TouchComponent->ComponentHasTag(FName("Axis_Y")))
+	{
+		this->AxisEnum = ESelectedAxis::Y_Axis;
+	}
+
+	else if (TouchComponent->ComponentHasTag(FName("Axis_Z")))
+	{
+		this->AxisEnum = ESelectedAxis::Z_Axis;
+	}
+
+	if (this->bEnableDebugMode)
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 10, FColor::Red, TouchComponent->GetFullName());
+	}
+}
+
+void AGizmoMove::BindDelegates()
+{
+	if (IsValid(this->Axis_X) && IsValid(this->Axis_Y) && IsValid(this->Axis_X))
+	{
+		this->Axis_X->OnClicked.AddDynamic(this, &AGizmoMove::OnClickedEvent);
+		this->Axis_Y->OnClicked.AddDynamic(this, &AGizmoMove::OnClickedEvent);
+		this->Axis_Z->OnClicked.AddDynamic(this, &AGizmoMove::OnClickedEvent);
+
+		UWorld* CurrentWorld = GEngine->GetCurrentPlayWorld();
+		const int32 PlayerIndex = UGameplayStatics::GetNumLocalPlayerControllers(CurrentWorld) - 1;
+		UGameplayStatics::GetPlayerController(CurrentWorld, PlayerIndex)->bEnableClickEvents = true;
+	}
+}
+
+void AGizmoMove::SetArrowMesh(UStaticMesh* In_Mesh)
+{
+	if (!IsValid(In_Mesh))
+	{
+		return;
+	}
+
+	this->Axis_X->SetStaticMesh(In_Mesh);
+	this->Axis_Y->SetStaticMesh(In_Mesh);
+	this->Axis_Z->SetStaticMesh(In_Mesh);
+}

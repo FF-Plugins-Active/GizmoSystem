@@ -7,15 +7,14 @@
 
 #include "GizmoBase.h"
 
-#include "GizmoMove.generated.h"
+#include "GizmoRotate.generated.h"
 
 UCLASS()
-class GIZMOSYSTEM_API AGizmoMove : public AActor
+class GIZMOSYSTEM_API AGizmoRotate : public AActor
 {
 	GENERATED_BODY()
-
+	
 protected:
-
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
@@ -23,8 +22,9 @@ protected:
 	AGizmoBase* GizmoBase;
 
 public:	
+
 	// Sets default values for this actor's properties
-	AGizmoMove();
+	AGizmoRotate();
 
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
@@ -36,9 +36,9 @@ public:
 	ESelectedAxis AxisEnum = ESelectedAxis::Null_Axis;
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere)
-	bool bMoveLocal = true;
+	bool bRotateLocal = true;
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere)
-	float MoveMultiplier = 5;
+	float RotateMultiplier = 5;
 
 };

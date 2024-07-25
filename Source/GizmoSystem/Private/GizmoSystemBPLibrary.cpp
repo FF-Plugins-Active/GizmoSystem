@@ -5,6 +5,11 @@
 
 #include "Math/Vector.h"
 
+#include "BaseGizmos/GizmoActor.h"
+#include "InteractiveGizmoManager.h"
+#include "InteractiveToolsContext.h"
+
+
 UGizmoSystemBPLibrary::UGizmoSystemBPLibrary(const FObjectInitializer& ObjectInitializer)
 : Super(ObjectInitializer)
 {

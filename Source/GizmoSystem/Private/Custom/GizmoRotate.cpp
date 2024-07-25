@@ -1,10 +1,6 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-#include "GizmoRotate.h"
-
-// Exprimental
-#include "BaseGizmos/TransformProxy.h"
-#include "BaseGizmos/TransformGizmoUtil.h"
+#include "Custom/GizmoRotate.h"
 
 AGizmoRotate::AGizmoRotate()
 {
@@ -59,16 +55,4 @@ void AGizmoRotate::Tick(float DeltaTime)
 	{
 
 	}
-}
-
-// Exprimental.
-void AGizmoRotate::EnableTransformGizmo()
-{
-	UTransformProxy* TransformProxy = NewObject<UTransformProxy>(this);
-	TransformProxy->AddComponent(this->GetRootComponent());
-
-	UInteractiveGizmoManager* GizmoManager = NewObject<UInteractiveGizmoManager>(this);
-	ETransformGizmoSubElements GizmoElements = ETransformGizmoSubElements::FullTranslateRotateScale;
-	this->TransformGizmo = UE::TransformGizmoUtil::CreateCustomTransformGizmo(GizmoManager, GizmoElements, this);
-	this->TransformGizmo->SetActiveTarget(TransformProxy);
 }

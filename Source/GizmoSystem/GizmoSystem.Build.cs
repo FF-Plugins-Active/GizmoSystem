@@ -8,20 +8,6 @@ public class GizmoSystem : ModuleRules
 	{
 		PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
 		
-		PublicIncludePaths.AddRange(
-			new string[] {
-				// ... add public include paths required here ...
-			}
-			);
-				
-		
-		PrivateIncludePaths.AddRange(
-			new string[] {
-				// ... add other private include paths required here ...
-			}
-			);
-			
-		
 		PublicDependencyModuleNames.AddRange(
 			new string[]
 			{
@@ -29,7 +15,6 @@ public class GizmoSystem : ModuleRules
 				// ... add other public dependencies that you statically link with here ...
 			}
 			);
-			
 		
 		PrivateDependencyModuleNames.AddRange(
 			new string[]
@@ -39,12 +24,11 @@ public class GizmoSystem : ModuleRules
 				"Slate",
 				"SlateCore",
 				"InputCore",
-                "InteractiveToolsFramework"
+                "InteractiveToolsFramework",
 				// ... add private dependencies that you statically link with here ...	
 			}
 			);
-		
-		
+
 		DynamicallyLoadedModuleNames.AddRange(
 			new string[]
 			{

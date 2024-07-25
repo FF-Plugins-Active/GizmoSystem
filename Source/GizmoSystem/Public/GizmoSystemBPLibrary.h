@@ -15,13 +15,13 @@ class UGizmoSystemBPLibrary : public UBlueprintFunctionLibrary
 {
 	GENERATED_UCLASS_BODY()
 
-	UFUNCTION(BlueprintCallable, meta = (DisplayName = "Is Vectors Parallel", ToolTip = "See if two normal vectors are nearly parallel, meaning the angle between them is close to 0 degrees.", Keywords = "vector, math, parallel"), Category = "Math")
+	UFUNCTION(BlueprintCallable, meta = (DisplayName = "Is Vectors Parallel", ToolTip = "See if two normal vectors are nearly parallel, meaning the angle between them is close to 0 degrees.", Keywords = "vector, math, parallel"), Category = "FF_GizmoSystem")
 	static bool IsVectorsParallel(const FVector V1, const FVector V2, float ParallelCosineThreshold);
 
-	UFUNCTION(BlueprintCallable, meta = (DisplayName = "Is Vectors Coincident", ToolTip = "See if two normal vectors are coincident (nearly parallel and point in the same direction).", Keywords = "vector, math, coincident"), Category = "Math")
+	UFUNCTION(BlueprintCallable, meta = (DisplayName = "Is Vectors Coincident", ToolTip = "See if two normal vectors are coincident (nearly parallel and point in the same direction).", Keywords = "vector, math, coincident"), Category = "FF_GizmoSystem")
 	static bool IsVectorsCoincident(const FVector V1, const FVector V2, float ParallelCosineThreshold);
 
-	UFUNCTION(BlueprintCallable, meta = (DisplayName = "Is Vectors Coincident", ToolTip = "See if two normal vectors are coincident (nearly parallel and point in the same direction).", Keywords = "vector, math, coincident"), Category = "Math")
+	UFUNCTION(BlueprintCallable, meta = (DisplayName = "Is Vectors Coincident", ToolTip = "See if two normal vectors are coincident (nearly parallel and point in the same direction).", Keywords = "vector, math, coincident"), Category = "FF_GizmoSystem")
 	static void AddLocalRotWithQuat(USceneComponent* TargetObject, const FVector RotationAxis, float RotationAngle);
 
 };
